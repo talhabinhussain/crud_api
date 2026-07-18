@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from app.routes.todo_route import route as todo_route
 
-app = FastAPI()
+app = FastAPI(title="Crud API")
 
 app.include_router(todo_route)
 
