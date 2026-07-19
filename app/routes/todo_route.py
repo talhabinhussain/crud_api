@@ -1,7 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse
-from sqlmodel import Session, select
+from sqlmodel import Session
 from app.models.task_model import Task, UpdateTask, CreateTask
+from app.repository.task_repo import all_task
+from app.services.task_service import get_task_by_id, remove_task, task_update
 from database.task_db import get_sessin
 
 route = APIRouter()
@@ -15,18 +17,14 @@ def health_route():
 @route.get("/tasks")
 def all_tasks_route(session: Session = Depends(get_sessin)):
 
-    get_all_task = session.exec(select(Task)).all()
+    result = all_task(session)
 
-    return get_all_task
+    return result
 
 
 @route.get("/task/{id}")
 def task_by_id(id: int, session: Session = Depends(get_sessin)) -> Task:
-    # for task in all_tasks:
-    #     if task.id == id:
-    #         return task
-    # raise HTTPException(status_code=404, detail=f"id {id} not found")
-    pass
+    return get_task_by_id(id, session)
 
 
 @route.post("/task")
@@ -46,24 +44,9 @@ def create_task(task: CreateTask, session: Session = Depends(get_sessin)):
 def update_task(
     id: int, update_task: UpdateTask, session: Session = Depends(get_sessin)
 ):
-    get_task = session.get(Task, id)
-    if not get_task:
-        raise HTTPException(status_code=404, detail=f"id {id} not found")
-
-    task_data = update_task.model_dump(exclude_unset=True)
-
-    for key, value in task_data.items():
-        setattr(get_task, key, value)
-
-    session.add(get_task)
-    session.commit()
-    session.refresh(get_task)
+    return task_update(id, update_task, session)
 
 
 @route.delete("/task/delete/{id}")
 def delete_task(id: int, session: Session = Depends(get_sessin)):
-    get_task = session.get(Task, id)
-    if not get_task:
-        raise HTTPException(status_code=404, detail=f"id {id} not found")
-    session.delete(get_task)
-    session.commit()
+    return remove_task(id, session)
