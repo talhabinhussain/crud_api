@@ -1,38 +1,10 @@
-from typing import List
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse
-from httpx import delete
-from pydantic import BaseModel, field_validator
-
+from sqlmodel import Session, select
+from app.models.task_model import Task, UpdateTask, CreateTask
+from database.task_db import get_sessin
 
 route = APIRouter()
-
-
-class Task(BaseModel):
-    id: int
-    title: str
-    done: bool = False
-
-
-class UpdateTask(BaseModel):
-    # id: int
-    title: str
-    done: bool = False
-
-    @field_validator("title")
-    @classmethod
-    def validate_title(cls, value: str) -> str:
-        cleaned = value.strip()
-        if not cleaned:
-            raise ValueError("title cannot be blank")
-        return cleaned
-
-
-all_tasks: List[Task] = [
-    Task(id=1, title="buy milk"),
-    Task(id=2, title="buy groceries"),
-    Task(id=3, title="do work", done=True),
-]
 
 
 @route.get("/health")
@@ -40,45 +12,58 @@ def health_route():
     return {"status": "ok"}
 
 
-@route.get("/task")
-def all_tasks_route():
+@route.get("/tasks")
+def all_tasks_route(session: Session = Depends(get_sessin)):
 
-    return all_tasks
+    get_all_task = session.exec(select(Task)).all()
+
+    return get_all_task
 
 
 @route.get("/task/{id}")
-def task_by_id(id: int) -> Task:
-    for task in all_tasks:
-        if task.id == id:
-            return task
-    raise HTTPException(status_code=404, detail=f"id {id} not found")
+def task_by_id(id: int, session: Session = Depends(get_sessin)) -> Task:
+    # for task in all_tasks:
+    #     if task.id == id:
+    #         return task
+    # raise HTTPException(status_code=404, detail=f"id {id} not found")
+    pass
 
 
 @route.post("/task")
-def create_task(new_task: Task):
-    for task in all_tasks:
-        if task.id == new_task.id:
-            raise HTTPException(status_code=400, detail="this id is already exist")
+def create_task(task: CreateTask, session: Session = Depends(get_sessin)):
+    # raise HTTPException(status_code=400, detail="this id is already exist")
+
+    task_obj = Task(**task.model_dump())
+
+    session.add(task_obj)
+    session.commit()
+    session.refresh(task_obj)
 
     return JSONResponse(status_code=201, content="task is created")
 
 
 @route.put("/task/{id}")
-def update_task(id: int, update_task: UpdateTask):
-    for task in all_tasks:
-        if task.id == id:
-            task.title = update_task.title
-            task.done = update_task.done
-            return JSONResponse(status_code=200, content="updated successfully")
+def update_task(
+    id: int, update_task: UpdateTask, session: Session = Depends(get_sessin)
+):
+    get_task = session.get(Task, id)
+    if not get_task:
+        raise HTTPException(status_code=404, detail=f"id {id} not found")
 
-    raise HTTPException(status_code=404, detail=f"id {id} not found")
+    task_data = update_task.model_dump(exclude_unset=True)
+
+    for key, value in task_data.items():
+        setattr(get_task, key, value)
+
+    session.add(get_task)
+    session.commit()
+    session.refresh(get_task)
 
 
 @route.delete("/task/delete/{id}")
-def delete_task(id: int):
-    for task in all_tasks:
-        if task.id == id:
-            all_tasks.remove(task)
-            return JSONResponse(status_code=200, content="task is deleted")
-
-    raise HTTPException(status_code=404, detail="not found")
+def delete_task(id: int, session: Session = Depends(get_sessin)):
+    get_task = session.get(Task, id)
+    if not get_task:
+        raise HTTPException(status_code=404, detail=f"id {id} not found")
+    session.delete(get_task)
+    session.commit()
