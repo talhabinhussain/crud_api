@@ -3,7 +3,7 @@ from fastapi.responses import JSONResponse
 from sqlmodel import Session
 from app.models.task_model import Task, UpdateTask, CreateTask
 from app.repository.task_repo import all_task
-from app.services.task_service import get_task_by_id, remove_task, task_update
+from app.services.task_service import get_task_by_id, get_task_stats, remove_task, task_update
 from database.task_db import get_sessin
 
 route = APIRouter()
@@ -20,6 +20,11 @@ def all_tasks_route(session: Session = Depends(get_sessin)):
     result = all_task(session)
 
     return result
+
+
+@route.get("/stats")
+def stats_route(session: Session = Depends(get_sessin)):
+    return get_task_stats(session)
 
 
 @route.get("/task/{id}")

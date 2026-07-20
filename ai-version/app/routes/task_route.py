@@ -6,6 +6,7 @@ from app.repository.task_repo import all_task
 from app.services.task_service import (
     create_task,
     get_task_by_id,
+    get_task_stats,
     remove_task,
     update_task,
 )
@@ -22,6 +23,11 @@ def health_route():
 @route.get("/tasks")
 def all_tasks_route(session: Session = Depends(get_session)):
     return all_task(session)
+
+
+@route.get("/stats")
+def stats_route(session: Session = Depends(get_session)):
+    return get_task_stats(session)
 
 
 @route.get("/task/{id}")

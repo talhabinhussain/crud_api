@@ -3,7 +3,7 @@ from fastapi.responses import JSONResponse
 from sqlmodel import Session
 
 from app.models.task_model import Task, UpdateTask
-from app.repository.task_repo import get_id, insert_task, task_delete
+from app.repository.task_repo import get_id, get_stats, insert_task, task_delete
 
 
 def get_task_by_id(id: int, session: Session):
@@ -36,6 +36,10 @@ def update_task(id: int, update_data: UpdateTask, session: Session):
         status_code=status.HTTP_200_OK,
         content={"id": updated.id, "title": updated.title, "done": updated.done},
     )
+
+
+def get_task_stats(session: Session):
+    return get_stats(session)
 
 
 def remove_task(id: int, session: Session):
