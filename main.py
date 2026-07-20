@@ -1,5 +1,4 @@
 from contextlib import asynccontextmanager
-
 from fastapi import FastAPI
 from app.routes.todo_route import route as todo_route
 from database.task_db import create_db_table
