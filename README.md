@@ -23,7 +23,7 @@ crud_api/
 │   ├── models/
 │   │   └── task_model.py       # Pydantic / SQLModel schemas (Task, CreateTask, UpdateTask)
 │   ├── repository/
-│   │   └── task_repo.py        # Raw database queries (all_task, get_id, insert_task, task_delete)
+│   │   └── task_repo.py        # Raw database queries (all_task, get_id, insert_task, task_delete, get_stats)
 │   ├── routes/
 │   │   └── todo_route.py       # HTTP endpoint definitions
 │   └── services/
@@ -53,9 +53,10 @@ Client  →  Route (routes/)  →  Service (services/)  →  Repository (reposit
 | `GET`    | `/task/{id}`      | Get task by ID    |
 | `POST`   | `/task`           | Create a new task |
 | `PUT`    | `/task/{id}`      | Update a task     |
+| `GET`    | `/stats`          | Task statistics (total, done, open) |
 | `DELETE` | `/task/delete/{id}` | Delete a task   |
 
-Total **6 endpoints**.
+Total **7 endpoints**.
 
 ---
 
@@ -86,7 +87,17 @@ curl.exe -X GET http://localhost:8000/health
 {"status":"ok"}
 ```
 
-### 2. List All Tasks (empty)
+### 2. Task Statistics
+
+```bash
+curl.exe -X GET http://localhost:8000/stats
+```
+
+```json
+{"total":3,"done":1,"open":2}
+```
+
+### 3. List All Tasks (empty)
 
 ```bash
 curl.exe -X GET http://localhost:8000/tasks
@@ -96,7 +107,7 @@ curl.exe -X GET http://localhost:8000/tasks
 []
 ```
 
-### 3. Create a Task
+### 4. Create a Task
 
 ```bash
 curl.exe -X POST http://localhost:8000/task ^
@@ -108,7 +119,7 @@ curl.exe -X POST http://localhost:8000/task ^
 "task is created"
 ```
 
-### 4. List All Tasks (after creation)
+### 5. List All Tasks (after creation)
 
 ```bash
 curl.exe -X GET http://localhost:8000/tasks
@@ -118,7 +129,7 @@ curl.exe -X GET http://localhost:8000/tasks
 [{"done":false,"id":1,"title":"coding"}]
 ```
 
-### 5. Get Task by ID
+### 6. Get Task by ID
 
 ```bash
 curl.exe -X GET http://localhost:8000/task/1
@@ -128,7 +139,7 @@ curl.exe -X GET http://localhost:8000/task/1
 {"done":false,"id":1,"title":"coding"}
 ```
 
-### 6. Update a Task
+### 7. Update a Task
 
 ```bash
 curl.exe -X PUT http://localhost:8000/task/1 ^
@@ -140,7 +151,7 @@ curl.exe -X PUT http://localhost:8000/task/1 ^
 "id 1 was added successfully"
 ```
 
-### 7. Delete a Task
+### 8. Delete a Task
 
 ```bash
 curl.exe -X DELETE http://localhost:8000/task/delete/1
@@ -150,7 +161,7 @@ curl.exe -X DELETE http://localhost:8000/task/delete/1
 "id 1 is deleted"
 ```
 
-### 8. Get Task by ID (not found)
+### 9. Get Task by ID (not found)
 
 ```bash
 curl.exe -X GET http://localhost:8000/task/999
@@ -167,7 +178,7 @@ curl.exe -X GET http://localhost:8000/task/999
 The **`crud_api/`** (root) project was written **manually by me**.  
 The **`ai-version/`** project was generated **by an AI agent (agentic coding)**.
 
-Both use the same tech stack (FastAPI + SQLModel + SQLite) and implement the same 6 CRUD + health operations. Below is a side-by-side analysis.
+Both use the same tech stack (FastAPI + SQLModel + SQLite) and implement the same 7 CRUD + health + stats operations. Below is a side-by-side analysis.
 
 | Criteria              | Me (Route)                                             | AI (ai-version)                                          | Better       |
 | --------------------- | ------------------------------------------------------- | -------------------------------------------------------- | ------------ |
