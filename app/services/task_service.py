@@ -1,9 +1,11 @@
+from datetime import datetime
+
 from fastapi import Depends, HTTPException, status
 from fastapi.responses import JSONResponse
 from sqlmodel import Session
 
 from app.models.task_model import CreateTask, UpdateTask, Task
-from app.repository.task_repo import get_id, get_stats, insert_task, task_delete
+from app.repositories.task_repo import get_id, get_stats, insert_task, task_delete
 
 
 # def get_id(id:int):
@@ -20,6 +22,8 @@ def get_task_by_id(id: int, session: Session):
 def create_task(task: CreateTask, session: Session):
     try:
         task_obj = Task(**task.model_dump())
+        task_obj.created_at = datetime.utcnow()
+        task_obj.updated_at = task_obj.created_at
         task_data = insert_task(task_obj, session)
         return task_data
     except Exception as exe:
@@ -35,6 +39,7 @@ def task_update(id: int, update_task: UpdateTask, session: Session):
     for key, value in task_data.items():
         setattr(task, key, value)
 
+    task.updated_at = datetime.utcnow()
     result = insert_task(task, session)
 
     return JSONResponse(

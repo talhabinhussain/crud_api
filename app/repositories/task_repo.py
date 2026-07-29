@@ -3,8 +3,18 @@ from sqlmodel import Session, func, select
 from app.models.task_model import Task
 
 
-def all_task(session: Session):
-    get_all_task = session.exec(select(Task)).all()
+def all_task(session: Session, search: str | None = None, done: bool | None = None):
+    query = select(Task)
+
+    if search:
+        query = query.where(Task.title.like(f"%{search}%"))
+
+    if done is not None:
+        query = query.where(Task.done == done)
+
+    query = query.order_by(Task.title)
+
+    get_all_task = session.exec(query).all()
     return get_all_task
 
 

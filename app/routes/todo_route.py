@@ -1,10 +1,17 @@
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse
 from sqlmodel import Session
-from app.models.task_model import Task, UpdateTask, CreateTask
-from app.repository.task_repo import all_task
-from app.services.task_service import get_task_by_id, get_task_stats, remove_task, task_update
-from database.task_db import get_sessin
+
+from app.database.task_db import get_sessin
+from app.models.task_model import CreateTask, Task, UpdateTask
+from app.repositories.task_repo import all_task
+from app.services.task_service import (
+    create_task as create_task_service,
+    get_task_by_id,
+    get_task_stats,
+    remove_task,
+    task_update,
+)
 
 route = APIRouter()
 
@@ -15,9 +22,12 @@ def health_route():
 
 
 @route.get("/tasks")
-def all_tasks_route(session: Session = Depends(get_sessin)):
-
-    result = all_task(session)
+def all_tasks_route(
+    session: Session = Depends(get_sessin),
+    search: str | None = None,
+    done: bool | None = None,
+):
+    result = all_task(session, search=search, done=done)
 
     return result
 
@@ -33,15 +43,8 @@ def task_by_id(id: int, session: Session = Depends(get_sessin)) -> Task:
 
 
 @route.post("/task")
-def create_task(task: CreateTask, session: Session = Depends(get_sessin)):
-    # raise HTTPException(status_code=400, detail="this id is already exist")
-
-    task_obj = Task(**task.model_dump())
-
-    session.add(task_obj)
-    session.commit()
-    session.refresh(task_obj)
-
+def create_task_route(task: CreateTask, session: Session = Depends(get_sessin)):
+    create_task_service(task, session)
     return JSONResponse(status_code=201, content="task is created")
 
 

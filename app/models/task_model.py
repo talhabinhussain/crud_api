@@ -1,5 +1,7 @@
+from datetime import datetime
+
 from pydantic import field_validator
-from sqlalchemy import VARCHAR, Column, Identity, Integer
+from sqlalchemy import VARCHAR, Column, DateTime, Identity, Integer
 from sqlmodel import Field, SQLModel
 
 
@@ -9,6 +11,19 @@ class Task(SQLModel, table=True):
     )
     title: str = Field(sa_column=Column(VARCHAR(225), nullable=False))
     done: bool = Field(default=False)
+    created_at: datetime = Field(
+        default_factory=datetime.utcnow,
+        sa_column=Column(DateTime, nullable=False, default=datetime.utcnow),
+    )
+    updated_at: datetime = Field(
+        default_factory=datetime.utcnow,
+        sa_column=Column(
+            DateTime,
+            nullable=False,
+            default=datetime.utcnow,
+            onupdate=datetime.utcnow,
+        ),
+    )
 
 
 class CreateTask(SQLModel):

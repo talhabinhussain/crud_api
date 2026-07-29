@@ -2,6 +2,8 @@
 
 A simple **Task CRUD API** built with **FastAPI** + **SQLModel** + **SQLite**.
 
+Changing the shape of a table felt a bit like rearranging furniture in a room you already lived in: everything still worked, but the whole layout had shifted underneath you. That uneasy feeling is exactly why migrations exist, and you’ll meet them properly in a later week.
+
 ---
 
 ## Tech Stack
@@ -28,8 +30,8 @@ crud_api/
 │   │   └── todo_route.py       # HTTP endpoint definitions
 │   └── services/
 │       └── task_service.py     # Business logic & error handling
-├── database/
-│   └── task_db.py              # Engine, session factory, table creation
+|   └── database/
+│         └── task_db.py              # Engine, session factory, table creation
 ├── main.py                     # FastAPI app entry point
 ├── pyproject.toml              # Dependencies & project metadata
 ├── task.db                     # SQLite database file (auto-generated)
