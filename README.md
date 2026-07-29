@@ -46,6 +46,44 @@ Client  →  Route (routes/)  →  Service (services/)  →  Repository (reposit
 
 ---
 
+## Database & ORM Decisions
+
+### Why a Database Instead of In-Memory Data?
+
+An in-memory list or dict disappears when the server stops, can't survive crashes, can't be shared across processes, and offers no query language. A database (SQLite) gives persistence, concurrent-safe access, structured queries, and data integrity — without needing a separate server process.
+
+### Database Schema
+
+![Database Schema](/public/db-screenshot.jpg)
+
+> *Screenshot of my database tables with some records and required field.*
+
+### Why an ORM Instead of Raw SQL?
+
+SQLModel provides Pythonic type safety, auto-generated DDL, composable queries (method chaining), and automatic parameter binding — reducing boilerplate and eliminating entire classes of SQL injection and type-mismatch bugs.
+
+### SQLModel Code vs Equivalent Raw SQL
+
+Each function in `app/repositories/task_repo.py` uses SQLModel; here is the equivalent raw SQL:
+
+| Function | SQLModel (task_repo.py) | Equivalent Raw SQL |
+|---|---|---|
+| `all_task` | `select(Task).where(...).order_by(...)` | `SELECT * FROM task WHERE title LIKE ? AND done = ? ORDER BY title` |
+| `get_id` | `session.get(Task, id)` | `SELECT * FROM task WHERE id = ?` |
+| `insert_task` | `session.add(task); session.commit()` | `INSERT INTO task (title, done) VALUES (?, ?)` |
+| `task_delete` | `session.delete(task); session.commit()` | `DELETE FROM task WHERE id = ?` |
+| `get_stats` | `select(func.count(Task.id)).where(...)` | `SELECT COUNT(id) FROM task WHERE done = 1` |
+
+### Why Query Parameters?
+
+Query parameters in `all_task` (`search`, `done`) let the client filter results flexibly without creating a new endpoint per filter combination.
+
+### What Is an Index?
+
+An index is a sorted lookup structure (like a book's index) that lets the database find rows without scanning the entire table — speeding up `WHERE`, `ORDER BY`, and `JOIN` operations.
+
+---
+
 ## Endpoints
 
 | Method   | Path              | Description       |
