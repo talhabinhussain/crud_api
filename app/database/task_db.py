@@ -1,7 +1,11 @@
 from sqlmodel import SQLModel, Session, create_engine
+from dotenv import load_dotenv
+import os
+
+load_dotenv(override=True)
 
 
-db_url = "sqlite:///task.db"
+db_url = os.getenv("DATABASE_URL")
 
 
 engine = create_engine(db_url)
