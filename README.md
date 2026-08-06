@@ -1,19 +1,125 @@
 # CRUD API — Route Project
 
-A simple **Task CRUD API** built with **FastAPI** + **SQLModel** + **SQLite**.
+A simple **Task CRUD API** built with **FastAPI** + **SQLModel** + **PostgreSQL** running inside a local **Docker** container.
 
-Changing the shape of a table felt a bit like rearranging furniture in a room you already lived in: everything still worked, but the whole layout had shifted underneath you. That uneasy feeling is exactly why migrations exist, and you’ll meet them properly in a later week.
+---
+
+## Project Evolution & Storage History
+
+The persistence layer of this project has evolved through three major iterations:
+
+1. **In-Memory Python List (Initial Implementation):** Simple and fast, but all data was lost every time the server restarted.
+2. **SQLite Database (Assignment 2):** Switched to a lightweight, file-based SQL database (`task.db`) using SQLModel. Data persisted across server restarts, but concurrency was limited and database files were tracked locally in the codebase.
+3. **PostgreSQL inside Docker (Current Implementation):** Migrated to a robust, production-grade PostgreSQL database isolated inside a Docker container, with data persisting in a Docker Volume.
 
 ---
 
 ## Tech Stack
 
-| Layer    | Technology                      |
-| -------- | ------------------------------- |
-| Web      | FastAPI (with standard extras)  |
-| ORM      | SQLModel                        |
-| Database | SQLite                          |
-| Language | Python 3.13+                    |
+| Layer    | Technology                                  |
+| -------- | ------------------------------------------- |
+| Web      | FastAPI (with standard extras)              |
+| ORM      | SQLModel                                    |
+| Database | PostgreSQL 17 (local Docker container)      |
+| Language | Python 3.13+                                |
+
+---
+
+## Database Architecture
+
+The application no longer uses SQLite as its primary database. The backend now connects to a PostgreSQL database running locally inside a Docker container.
+
+### Component Architecture
+
+```text
+                Docker Desktop
+                     │
+        ┌────────────┴─────────────┐
+        │                          │
+   FastAPI Application      PostgreSQL Container (taskdb)
+        │                          │
+        └────────── TCP ───────────┘
+               localhost:5432
+                     │
+               Docker Volume (taskdata)
+                  taskdata
+```
+
+### Component Relationships & Connectivity
+
+- **FastAPI Application:** Runs on the host machine and handles incoming client HTTP requests. It acts as the database client.
+- **PostgreSQL Container (`taskdb`):** The database server runs isolated within this Docker container, managed by Docker Desktop.
+- **localhost:5432:** Docker maps port `5432` of the container to port `5432` of the host computer, allowing the FastAPI application to establish a standard TCP connection to PostgreSQL using `localhost:5432`.
+- **Docker Volume (`taskdata`):** PostgreSQL database files are not stored within the project directory. Instead, they are mounted to a Docker Volume (`taskdata`) which points to `/var/lib/postgresql/data` inside the container. This ensures data survives container restarts and deletions.
+- **Environment Configuration:** The FastAPI application discovers and connects to the database via the `DATABASE_URL` environment variable loaded from the `.env` file.
+
+---
+
+## Why Docker & PostgreSQL?
+
+Using Docker to containerize our PostgreSQL database solves several developer pain points:
+
+- **Zero Manual Installation:** Developers do not need to install and configure PostgreSQL on their local machines.
+- **Consistent Environments:** Every team member runs the exact same PostgreSQL version (v17), ensuring consistent behavior.
+- **No "Works on My Machine" Issues:** Eliminates configuration differences between operating systems (Windows, macOS, Linux).
+- **Portability & Reproducibility:** The database can be spun up or torn down with a single command, making onboarding instantaneous.
+
+---
+
+## Setting up PostgreSQL with Docker
+
+To run the PostgreSQL database locally, use Docker to download the image, create the volume, and start the container.
+
+### Setup Configuration Details
+- **Docker Image:** `postgres:17`
+- **Container Name:** `taskdb`
+- **Host Port:** `5432`
+- **Container Port:** `5432`
+- **Docker Volume:** `taskdata`
+- **Data Persistence:** Enabled via volume mounting.
+
+### Initialization Command
+Run the following command in your terminal to create and start the PostgreSQL container:
+
+```bash
+docker run --name taskdb \
+  -e POSTGRES_PASSWORD=dev \
+  -e POSTGRES_DB=tasks \
+  -p 5432:5432 \
+  -v taskdata:/var/lib/postgresql/data \
+  -d postgres:17
+```
+
+---
+
+## Connection String Breakdown
+
+The FastAPI application uses the `DATABASE_URL` environment variable to connect to the database.
+
+**Example Connection String:**
+```env
+DATABASE_URL=postgresql://postgres:dev@localhost:5432/tasks
+```
+
+| Part | Value | Description |
+| :--- | :--- | :--- |
+| **Protocol / Driver** | `postgresql` | Tells the client/SQLModel to connect using the PostgreSQL driver. |
+| **Username** | `postgres` | Default administrative username for PostgreSQL. |
+| **Password** | `dev` | The password configured when starting the container (`POSTGRES_PASSWORD`). |
+| **Host** | `localhost` | The host address (since Docker maps the port to the host machine). |
+| **Port** | `5432` | The mapped TCP port exposing PostgreSQL outside the container. |
+| **Database Name** | `tasks` | The specific database within the PostgreSQL instance (`POSTGRES_DB`). |
+
+---
+
+## Migration from SQLite
+
+Migrating to PostgreSQL has been completed with minimal impact on application code:
+- **Storage Layer Isolation:** Only the database storage layer changed. 
+- **Identical API Endpoints:** All API endpoints remain exactly the same.
+- **Unchanged Message Formats:** Request bodies and JSON response payloads are unchanged.
+- **Identical CRUD Behavior:** All behaviors (creation, update, statistics, filters) are completely identical.
+- **SQLModel Adaptability:** Since SQLModel acts as a translation layer, the ORM queries automatically adapt from SQLite syntax to PostgreSQL syntax.
 
 ---
 
@@ -22,65 +128,70 @@ Changing the shape of a table felt a bit like rearranging furniture in a room yo
 ```
 crud_api/
 ├── app/
+│   ├── database/
+│   │   └── task_db.py          # Engine, session factory, table creation (PostgreSQL)
 │   ├── models/
 │   │   └── task_model.py       # Pydantic / SQLModel schemas (Task, CreateTask, UpdateTask)
-│   ├── repository/
+│   ├── repositories/
 │   │   └── task_repo.py        # Raw database queries (all_task, get_id, insert_task, task_delete, get_stats)
 │   ├── routes/
 │   │   └── todo_route.py       # HTTP endpoint definitions
 │   └── services/
 │       └── task_service.py     # Business logic & error handling
-|   └── database/
-│         └── task_db.py              # Engine, session factory, table creation
 ├── main.py                     # FastAPI app entry point
 ├── pyproject.toml              # Dependencies & project metadata
-├── task.db                     # SQLite database file (auto-generated)
+├── .env.example                # Example environment variables file
+├── .env                        # Local environment variables file (git-ignored)
 └── README.md
 ```
 
 ### Architecture Flow
 
 ```
-Client  →  Route (routes/)  →  Service (services/)  →  Repository (repository/)  →  Database (database/)
+Client  →  Route (routes/)  →  Service (services/)  →  Repository (repositories/)  →  Database (database/)
 ```
 
 ---
 
-## Database & ORM Decisions
+## Getting Started
 
-### Why a Database Instead of In-Memory Data?
+### 1. Prerequisite
+Ensure you have [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed and running.
 
-An in-memory list or dict disappears when the server stops, can't survive crashes, can't be shared across processes, and offers no query language. A database (SQLite) gives persistence, concurrent-safe access, structured queries, and data integrity — without needing a separate server process.
+### 2. Set Up the Database
+If you haven't created the PostgreSQL container yet, run the setup command:
+```bash
+docker run --name taskdb -e POSTGRES_PASSWORD=dev -e POSTGRES_DB=tasks -p 5432:5432 -v taskdata:/var/lib/postgresql/data -d postgres:17
+```
 
-### Database Schema
+If you have already created the container, start it using:
+```bash
+docker start taskdb
+```
+*(Or, if a Docker Compose configuration is added in the future, run `docker compose up -d`)*
 
-![Database Schema](/public/db-screenshot.jpg)
+### 3. Configure Environment Variables
+Create a local `.env` file in the root directory by copying the example template:
+```bash
+cp .env.example .env
+```
+Ensure the `DATABASE_URL` in `.env` matches your Docker container's configurations:
+```env
+DATABASE_URL=postgresql://postgres:dev@localhost:5432/tasks
+```
 
-> *Screenshot of my database tables with some records and required field.*
+### 4. Run the Application
+Use `uv` (or pip) to install dependencies and run the server:
+```bash
+# Install dependencies
+uv sync
 
-### Why an ORM Instead of Raw SQL?
+# Start the server
+uv run uvicorn main:app --reload
+```
 
-SQLModel provides Pythonic type safety, auto-generated DDL, composable queries (method chaining), and automatic parameter binding — reducing boilerplate and eliminating entire classes of SQL injection and type-mismatch bugs.
-
-### SQLModel Code vs Equivalent Raw SQL
-
-Each function in `app/repositories/task_repo.py` uses SQLModel; here is the equivalent raw SQL:
-
-| Function | SQLModel (task_repo.py) | Equivalent Raw SQL |
-|---|---|---|
-| `all_task` | `select(Task).where(...).order_by(...)` | `SELECT * FROM task WHERE title LIKE ? AND done = ? ORDER BY title` |
-| `get_id` | `session.get(Task, id)` | `SELECT * FROM task WHERE id = ?` |
-| `insert_task` | `session.add(task); session.commit()` | `INSERT INTO task (title, done) VALUES (?, ?)` |
-| `task_delete` | `session.delete(task); session.commit()` | `DELETE FROM task WHERE id = ?` |
-| `get_stats` | `select(func.count(Task.id)).where(...)` | `SELECT COUNT(id) FROM task WHERE done = 1` |
-
-### Why Query Parameters?
-
-Query parameters in `all_task` (`search`, `done`) let the client filter results flexibly without creating a new endpoint per filter combination.
-
-### What Is an Index?
-
-An index is a sorted lookup structure (like a book's index) that lets the database find rows without scanning the entire table — speeding up `WHERE`, `ORDER BY`, and `JOIN` operations.
+Server starts at **http://localhost:8000**.  
+Swagger docs at **http://localhost:8000/docs**.
 
 ---
 
@@ -97,21 +208,6 @@ An index is a sorted lookup structure (like a book's index) that lets the databa
 | `DELETE` | `/task/delete/{id}` | Delete a task   |
 
 Total **7 endpoints**.
-
----
-
-## How to Run
-
-```bash
-# Install dependencies
-uv sync
-
-# Start the server
-uv run uvicorn main:app --reload
-```
-
-Server starts at **http://localhost:8000**.  
-Swagger docs at **http://localhost:8000/docs**.
 
 ---
 
@@ -218,7 +314,7 @@ curl.exe -X GET http://localhost:8000/task/999
 The **`crud_api/`** (root) project was written **manually by me**.  
 The **`ai-version/`** project was generated **by an AI agent (agentic coding)**.
 
-Both use the same tech stack (FastAPI + SQLModel + SQLite) and implement the same 7 CRUD + health + stats operations. Below is a side-by-side analysis.
+Both implemented the same 7 CRUD + health + stats operations, originally on SQLite (and now migrated to PostgreSQL). Below is a side-by-side analysis of the initial code implementations.
 
 | Criteria              | Me (Route)                                             | AI (ai-version)                                          | Better       |
 | --------------------- | ------------------------------------------------------- | -------------------------------------------------------- | ------------ |
