@@ -1,0 +1,49 @@
+services:
+  db:
+    # Use the official PostgreSQL 17 image
+    image: postgres:17
+    
+    # Ensure the container restarts automatically if it crashes or the daemon restarts
+    restart: always
+    
+    # Environment variables to configure PostgreSQL credentials and default database
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pg-dev}
+      POSTGRES_DB: ${POSTGRES_DB:-tasks}
+      
+    # Expose the PostgreSQL port 5432 to the host machine
+    ports:
+      - "5432:5432"
+      
+    # Mount a persistent volume to preserve database files across restarts and shutdowns
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      
+    # Healthcheck to verify the database is fully initialized and accepting connections
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-postgres} -d $${POSTGRES_DB:-tasks}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    # Build the image using the Dockerfile in the current directory
+    build: .
+    
+    # Expose the FastAPI application port 8000 to the host machine
+    ports:
+      - "8000:8000"
+      
+    # Inject the DATABASE_URL environment variable, referencing the 'db' service hostname
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-pg-dev}@db:5432/${POSTGRES_DB:-tasks}
+      
+    # Ensure the database service is healthy before starting the API container
+    depends_on:
+      db:
+        condition: service_healthy
+
+# Define the persistent volume for PostgreSQL
+volumes:
+  postgres_data:

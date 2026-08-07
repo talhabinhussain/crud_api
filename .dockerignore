@@ -1,0 +1,24 @@
+# Ignore environment secrets (avoids load_dotenv overriding container environment variables)
+.env
+
+# Ignore local virtual environments and caches
+.venv
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Ignore local SQLite databases (if any leftovers exist)
+*.db
+*.db-journal
+
+# Ignore Git files
+.git
+.gitignore
+
+# Ignore other developer tools and readmes
+README.md
+.python-version
+tests/
