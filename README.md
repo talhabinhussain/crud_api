@@ -66,6 +66,29 @@ Using Docker to containerize our PostgreSQL database solves several developer pa
 
 ---
 
+## Database Verification with PostgreSQL (psql)
+
+The PostgreSQL database was verified directly from the running Docker Compose database container using the `psql` command-line client.
+
+From PowerShell, I accessed the PostgreSQL terminal with:
+
+```bash
+docker compose exec db psql -U postgres -d tasks
+```
+
+### Database Tables (`\dt`)
+
+> **Screenshot Placeholder:** Output of the `\dt` command showing all PostgreSQL tables.
+
+![Database Tables](/public/01-psql-screenshot.jpg)
+
+### Stored Data (`SELECT * FROM <table_name>;`)
+
+> **Screenshot Placeholder:** Output of the SQL query displaying all records from the table.
+
+![Stored Data](/public/02-psql-screenshot.jpg)
+
+---
 ## Setting up PostgreSQL with Docker
 
 To run the PostgreSQL database locally, use Docker to download the image, create the volume, and start the container.
@@ -334,3 +357,4 @@ Both implemented the same 7 CRUD + health + stats operations, originally on SQLi
 ## Verdict
 
 > The AI version follows REST best practices, returns proper HTTP status codes and structured JSON, uses modern FastAPI patterns (lifespan, optional fields), includes a comprehensive test suite, and has cleaner package structure — while the manually written route project contains inconsistent status codes, non-RESTful URLs, dead code, a typo, and no tests.
+
